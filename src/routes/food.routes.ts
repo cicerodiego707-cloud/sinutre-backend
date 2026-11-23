@@ -37,16 +37,120 @@ foodRouter.post('/', requireAuth, async (req, res) => {
     return res.sendStatus(401);
   }
 
+  if (
+  typeof name !== 'string' ||
+  !name.trim() ||
+  typeof caloriesPer100g !== 'number' ||
+  !Number.isFinite(caloriesPer100g) ||
+  caloriesPer100g < 0 ||
+  typeof carbsPer100g !== 'number' ||
+  !Number.isFinite(carbsPer100g) ||
+  carbsPer100g < 0 ||
+  typeof proteinPer100g !== 'number' ||
+  !Number.isFinite(proteinPer100g) ||
+  proteinPer100g < 0 ||
+  typeof fatPer100g !== 'number' ||
+  !Number.isFinite(fatPer100g) ||
+  fatPer100g < 0
+) {
+    return res.status(400).json({
+      error: 'Informe um nome e valores nutricionais válidos. Os valores não podem ser negativos.',
+    });
+  }
+
   const food = await prisma.food.create({
     data: {
-      name,
+      name: name.trim(),
       caloriesPer100g,
       carbsPer100g,
       proteinPer100g,
       fatPer100g,
-      userId: req.userId!,
+      userId: req.userId,
     },
   });
 
   return res.status(201).json(food);
+});
+
+foodRouter.put('/:id', requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+
+  const {
+    name,
+    caloriesPer100g,
+    carbsPer100g,
+    proteinPer100g,
+    fatPer100g,
+  } = req.body;
+
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({
+      error: 'ID do alimento inválido.',
+    });
+  }
+
+  if (
+    typeof name !== 'string' ||
+    !name.trim() ||
+    ![caloriesPer100g, carbsPer100g, proteinPer100g, fatPer100g]
+      .every(value => typeof value === 'number' && Number.isFinite(value) && value >= 0)
+  ) {
+    return res.status(400).json({
+      error: 'Informe dados nutricionais válidos.',
+    });
+  }
+
+  const updated = await prisma.food.updateMany({
+    where: {
+      id,
+      userId: req.userId!,
+    },
+    data: {
+      name: name.trim(),
+      caloriesPer100g,
+      carbsPer100g,
+      proteinPer100g,
+      fatPer100g,
+    },
+  });
+
+  if (updated.count === 0) {
+    return res.status(404).json({
+      error: 'Alimento não encontrado.',
+    });
+  }
+
+  const food = await prisma.food.findFirst({
+    where: {
+      id,
+      userId: req.userId!,
+    },
+  });
+
+  return res.json(food);
+});
+
+foodRouter.delete('/:id', requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({
+      error: 'ID do alimento inválido.',
+    });
+  }
+
+  const deleted = await prisma.food.deleteMany({
+    where: {
+      id,
+      userId: req.userId!,
+    },
+  });
+
+  if (deleted.count === 0) {
+    return res.status(404).json({
+      error: 'Alimento não encontrado.',
+    });
+  }
+
+  return res.status(204).send();
 });

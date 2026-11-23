@@ -4,7 +4,7 @@ import { env } from './config/env';
 import { authRoutes } from './routes/auth.routes';
 import { mealsRoutes } from './routes/meals.routes';
 import { foodRouter } from './routes/food.routes';
-
+import { healthRoutes } from './routes/health.routes';
 export const app = express();
 
 app.use(cors({ origin: env.frontendUrl, credentials: true }));
@@ -17,3 +17,4 @@ app.get('/health', (_req, res) => {
 app.use('/auth', authRoutes);
 app.use('/meals', mealsRoutes);
 app.use('/foods', foodRouter)
+app.use('/healthdata', healthRoutes);
