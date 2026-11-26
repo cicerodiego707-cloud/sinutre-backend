@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { requireAuth } from '../middlewares/auth.middleware';
 import { prisma } from '../prisma';
+import { Prisma } from '@prisma/client';
 
 export const foodRouter = Router();
 
@@ -130,6 +131,7 @@ foodRouter.put('/:id', requireAuth, async (req, res) => {
   return res.json(food);
 });
 
+
 foodRouter.delete('/:id', requireAuth, async (req, res) => {
   const id = Number(req.params.id);
 
@@ -139,18 +141,35 @@ foodRouter.delete('/:id', requireAuth, async (req, res) => {
     });
   }
 
-  const deleted = await prisma.food.deleteMany({
-    where: {
-      id,
-      userId: req.userId!,
-    },
-  });
+  try {
+    const deleted = await prisma.food.deleteMany({
+      where: {
+        id,
+        userId: req.userId!,
+      },
+    });
 
-  if (deleted.count === 0) {
-    return res.status(404).json({
-      error: 'Alimento não encontrado.',
+    if (deleted.count === 0) {
+      return res.status(404).json({
+        error: 'Alimento não encontrado.',
+      });
+    }
+
+    return res.status(204).send();
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2003'
+    ) {
+      return res.status(409).json({
+        error: 'Este alimento está vinculado a refeições e não pode ser excluído.',
+      });
+    }
+
+    console.error('Erro ao excluir alimento:', error);
+
+    return res.status(500).json({
+      error: 'Não foi possível excluir o alimento.',
     });
   }
-
-  return res.status(204).send();
 });
